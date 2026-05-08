@@ -44,12 +44,19 @@
       border-radius: 10px;
       border: 1px solid #ccc;
       background: transparent;
+      flex-shrink: 0;
     }
 
     #hexValue {
       font-size: 1.4rem;
       font-weight: bold;
       font-family: monospace;
+    }
+
+    #colorName {
+      font-size: 1.1rem;
+      margin-top: 4px;
+      font-weight: bold;
     }
 
     .canvasWrap {
@@ -77,7 +84,7 @@
 <body>
   <div class="container">
     <h1>Image Cursor Color Picker</h1>
-    <p>Upload an image, move your cursor over it, and this app will show the exact six-digit hex color under your cursor.</p>
+    <p>Upload an image, move your cursor over it, and this app will show the exact six-digit hex color and the closest common color name.</p>
 
     <input type="file" id="imageUpload" accept="image/*" />
 
@@ -85,6 +92,7 @@
       <div id="colorBox"></div>
       <div>
         <div id="hexValue">#------</div>
+        <div id="colorName">Color name: —</div>
         <div class="small" id="positionValue">Upload an image to begin.</div>
       </div>
     </div>
@@ -100,9 +108,71 @@
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     const colorBox = document.getElementById("colorBox");
     const hexValue = document.getElementById("hexValue");
+    const colorName = document.getElementById("colorName");
     const positionValue = document.getElementById("positionValue");
 
     let imageLoaded = false;
+
+    // A list of common color names and their hex values.
+    // The app compares the cursor color to these and picks the closest match.
+    const namedColors = [
+      { name: "Black", hex: "#000000" },
+      { name: "White", hex: "#FFFFFF" },
+      { name: "Gray", hex: "#808080" },
+      { name: "Silver", hex: "#C0C0C0" },
+      { name: "Red", hex: "#FF0000" },
+      { name: "Maroon", hex: "#800000" },
+      { name: "Orange", hex: "#FFA500" },
+      { name: "Yellow", hex: "#FFFF00" },
+      { name: "Olive", hex: "#808000" },
+      { name: "Lime", hex: "#00FF00" },
+      { name: "Green", hex: "#008000" },
+      { name: "Teal", hex: "#008080" },
+      { name: "Cyan", hex: "#00FFFF" },
+      { name: "Sky Blue", hex: "#87CEEB" },
+      { name: "Blue", hex: "#0000FF" },
+      { name: "Navy", hex: "#000080" },
+      { name: "Purple", hex: "#800080" },
+      { name: "Magenta", hex: "#FF00FF" },
+      { name: "Pink", hex: "#FFC0CB" },
+      { name: "Brown", hex: "#A52A2A" },
+      { name: "Tan", hex: "#D2B48C" },
+      { name: "Beige", hex: "#F5F5DC" },
+      { name: "Gold", hex: "#FFD700" },
+      { name: "Coral", hex: "#FF7F50" },
+      { name: "Salmon", hex: "#FA8072" },
+      { name: "Lavender", hex: "#E6E6FA" },
+      { name: "Violet", hex: "#EE82EE" },
+      { name: "Indigo", hex: "#4B0082" },
+      { name: "Turquoise", hex: "#40E0D0" },
+      { name: "Mint", hex: "#98FF98" },
+      { name: "Cream", hex: "#FFFDD0" },
+      { name: "Ivory", hex: "#FFFFF0" },
+      { name: "Charcoal", hex: "#36454F" },
+      { name: "Light Gray", hex: "#D3D3D3" },
+      { name: "Dark Gray", hex: "#A9A9A9" },
+      { name: "Light Blue", hex: "#ADD8E6" },
+      { name: "Dark Blue", hex: "#00008B" },
+      { name: "Light Green", hex: "#90EE90" },
+      { name: "Dark Green", hex: "#006400" },
+      { name: "Light Pink", hex: "#FFB6C1" },
+      { name: "Hot Pink", hex: "#FF69B4" },
+      { name: "Deep Pink", hex: "#FF1493" },
+      { name: "Crimson", hex: "#DC143C" },
+      { name: "Tomato", hex: "#FF6347" },
+      { name: "Khaki", hex: "#F0E68C" },
+      { name: "Plum", hex: "#DDA0DD" },
+      { name: "Orchid", hex: "#DA70D6" },
+      { name: "Slate Blue", hex: "#6A5ACD" },
+      { name: "Royal Blue", hex: "#4169E1" },
+      { name: "Steel Blue", hex: "#4682B4" },
+      { name: "Aqua", hex: "#00FFFF" },
+      { name: "Aquamarine", hex: "#7FFFD4" },
+      { name: "Forest Green", hex: "#228B22" },
+      { name: "Sea Green", hex: "#2E8B57" },
+      { name: "Chocolate", hex: "#D2691E" },
+      { name: "Sienna", hex: "#A0522D" }
+    ];
 
     imageUpload.addEventListener("change", function (event) {
       const file = event.target.files[0];
@@ -115,16 +185,15 @@
         const img = new Image();
 
         img.onload = function () {
-          // Set the canvas's real pixel size to the image's real pixel size.
           canvas.width = img.naturalWidth;
           canvas.height = img.naturalHeight;
 
-          // Draw the uploaded image onto the canvas.
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
           imageLoaded = true;
           hexValue.textContent = "#------";
+          colorName.textContent = "Color name: —";
           colorBox.style.background = "transparent";
           positionValue.textContent = "Image loaded. Move your cursor over it.";
         };
@@ -145,7 +214,6 @@
 
       const rect = canvas.getBoundingClientRect();
 
-      // This keeps the cursor position accurate even when the canvas is scaled down on the page.
       const scaleX = canvas.width / rect.width;
       const scaleY = canvas.height / rect.height;
 
@@ -160,18 +228,21 @@
       const b = pixel[2];
 
       const hex = rgbToHex(r, g, b);
+      const closestName = getClosestColorName(r, g, b);
 
       hexValue.textContent = hex;
+      colorName.textContent = `Color name: ${closestName}`;
       colorBox.style.background = hex;
       positionValue.textContent = `Pixel position: x=${x}, y=${y}`;
     });
 
     canvas.addEventListener("click", function () {
       const color = hexValue.textContent;
+      const name = colorName.textContent.replace("Color name: ", "");
 
       if (color && color !== "#------") {
-        navigator.clipboard.writeText(color);
-        positionValue.textContent = `Copied ${color} to clipboard.`;
+        navigator.clipboard.writeText(`${color} — ${name}`);
+        positionValue.textContent = `Copied ${color} — ${name} to clipboard.`;
       }
     });
 
@@ -180,6 +251,37 @@
         .map(value => value.toString(16).padStart(2, "0"))
         .join("")
         .toUpperCase();
+    }
+
+    function hexToRgb(hex) {
+      const cleanHex = hex.replace("#", "");
+      return {
+        r: parseInt(cleanHex.substring(0, 2), 16),
+        g: parseInt(cleanHex.substring(2, 4), 16),
+        b: parseInt(cleanHex.substring(4, 6), 16)
+      };
+    }
+
+    function getClosestColorName(r, g, b) {
+      let closestColor = namedColors[0];
+      let smallestDistance = Infinity;
+
+      namedColors.forEach(color => {
+        const rgb = hexToRgb(color.hex);
+
+        const distance = Math.sqrt(
+          Math.pow(r - rgb.r, 2) +
+          Math.pow(g - rgb.g, 2) +
+          Math.pow(b - rgb.b, 2)
+        );
+
+        if (distance < smallestDistance) {
+          smallestDistance = distance;
+          closestColor = color;
+        }
+      });
+
+      return closestColor.name;
     }
   </script>
 </body>
