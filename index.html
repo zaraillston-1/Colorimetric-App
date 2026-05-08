@@ -1,1 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Image Cursor Color Picker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 30px;
+      background: #f5f5f5;
+      color: #222;
+    }
 
+    .container {
+      max-width: 950px;
+      margin: 0 auto;
+      background: white;
+      padding: 25px;
+      border-radius: 16px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    }
+
+    h1 {
+      margin-top: 0;
+    }
+
+    input[type="file"] {
+      margin: 15px 0;
+    }
+
+    .info {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+
+    #colorBox {
+      width: 60px;
+      height: 60px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      background: transparent;
+    }
+
+    #hexValue {
+      font-size: 1.4rem;
+      font-weight: bold;
+      font-family: monospace;
+    }
+
+    .canvasWrap {
+      width: 100%;
+      overflow: auto;
+      margin-top: 15px;
+    }
+
+    canvas {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      cursor: crosshair;
+      background: #eee;
+    }
+
+    .small {
+      color: #666;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Image Cursor Color Picker</h1>
+    <p>Upload an image, move your cursor over it, and this app will show the exact six-digit hex color under your cursor.</p>
+
+    <input type="file" id="imageUpload" accept="image/*" />
+
+    <div class="info">
+      <div id="colorBox"></div>
+      <div>
+        <div id="hexValue">#------</div>
+        <div class="small" id="positionValue">Upload an image to begin.</div>
+      </div>
+    </div>
+
+    <div class="canvasWrap">
+      <canvas id="canvas"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const imageUpload = document.getElementById("imageUpload");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const colorBox = document.getElementById("colorBox");
+    const hexValue = document.getElementById("hexValue");
+    const positionValue = document.getElementById("positionValue");
+
+    let imageLoaded = false;
+
+    imageUpload.addEventListener("change", function (event) {
+      const file = event.target.files[0];
+
+      if (!file) return;
+
+      const reader = new FileReader();
+
+      reader.onload = function (e) {
+        const img = new Image();
+
+        img.onload = function () {
+          // Set the canvas's real pixel size to the image's real pixel size.
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+
+          // Draw the uploaded image onto the canvas.
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          imageLoaded = true;
+          hexValue.textContent = "#------";
+          colorBox.style.background = "transparent";
+          positionValue.textContent = "Image loaded. Move your cursor over it.";
+        };
+
+        img.onerror = function () {
+          imageLoaded = false;
+          positionValue.textContent = "Could not load that image. Try a different file.";
+        };
+
+        img.src = e.target.result;
+      };
+
+      reader.readAsDataURL(file);
+    });
+
+    canvas.addEventListener("mousemove", function (event) {
+      if (!imageLoaded) return;
+
+      const rect = canvas.getBoundingClientRect();
+
+      // This keeps the cursor position accurate even when the canvas is scaled down on the page.
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+
+      const x = Math.floor((event.clientX - rect.left) * scaleX);
+      const y = Math.floor((event.clientY - rect.top) * scaleY);
+
+      if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return;
+
+      const pixel = ctx.getImageData(x, y, 1, 1).data;
+      const r = pixel[0];
+      const g = pixel[1];
+      const b = pixel[2];
+
+      const hex = rgbToHex(r, g, b);
+
+      hexValue.textContent = hex;
+      colorBox.style.background = hex;
+      positionValue.textContent = `Pixel position: x=${x}, y=${y}`;
+    });
+
+    canvas.addEventListener("click", function () {
+      const color = hexValue.textContent;
+
+      if (color && color !== "#------") {
+        navigator.clipboard.writeText(color);
+        positionValue.textContent = `Copied ${color} to clipboard.`;
+      }
+    });
+
+    function rgbToHex(r, g, b) {
+      return "#" + [r, g, b]
+        .map(value => value.toString(16).padStart(2, "0"))
+        .join("")
+        .toUpperCase();
+    }
+  </script>
+</body>
+</html>
