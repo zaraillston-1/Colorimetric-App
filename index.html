@@ -47,12 +47,6 @@
       flex-shrink: 0;
     }
 
-    #hexValue {
-      font-size: 1.4rem;
-      font-weight: bold;
-      font-family: monospace;
-    }
-
     #tubeColorName {
       font-size: 1.3rem;
       margin-top: 4px;
@@ -104,7 +98,6 @@
     <div class="info">
       <div id="colorBox"></div>
       <div>
-        <div id="hexValue">#------</div>
         <div id="tubeColorName">Tube color: —</div>
         <div class="small" id="rgbValue">RGB: —</div>
         <div class="small" id="positionValue">Upload an image to begin.</div>
@@ -125,7 +118,6 @@
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     const colorBox = document.getElementById("colorBox");
-    const hexValue = document.getElementById("hexValue");
     const tubeColorName = document.getElementById("tubeColorName");
     const rgbValue = document.getElementById("rgbValue");
     const positionValue = document.getElementById("positionValue");
@@ -150,7 +142,6 @@
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
           imageLoaded = true;
-          hexValue.textContent = "#------";
           tubeColorName.textContent = "Tube color: —";
           rgbValue.textContent = "RGB: —";
           colorBox.style.background = "transparent";
@@ -190,7 +181,6 @@
       const hex = rgbToHex(r, g, b);
       const tubeColor = classifyTubeColor(r, g, b);
 
-      hexValue.textContent = hex;
       tubeColorName.textContent = `Tube color: ${tubeColor}`;
       rgbValue.textContent = `RGB: ${r}, ${g}, ${b}`;
       colorBox.style.background = hex;
@@ -198,12 +188,12 @@
     });
 
     canvas.addEventListener("click", function () {
-      const color = hexValue.textContent;
       const tubeColor = tubeColorName.textContent.replace("Tube color: ", "");
+      const rgb = rgbValue.textContent;
 
-      if (color && color !== "#------") {
-        navigator.clipboard.writeText(`${tubeColor} — ${color}`);
-        positionValue.textContent = `Copied ${tubeColor} — ${color} to clipboard.`;
+      if (tubeColor && tubeColor !== "—") {
+        navigator.clipboard.writeText(`${tubeColor} — ${rgb}`);
+        positionValue.textContent = `Copied ${tubeColor} to clipboard.`;
       }
     });
 
