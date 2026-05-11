@@ -279,28 +279,64 @@
       const saturation = hsl.s;
       const lightness = hsl.l;
 
-      // Blank tubes in your photo are mostly pale/clear with low color saturation.
-      // Glare, plastic, and clear liquid usually fall here.
-      if (saturation < 0.18 || lightness > 0.86) {
+      // These extra values help separate yellow from orange in tube photos.
+      // Yellow liquid usually keeps a stronger green value.
+      // Orange liquid usually has much more red than green.
+      const redMinusGreen = r - g;
+      const greenMinusBlue = g - b;
+
+      // Blank tubes are pale/clear, low-saturation, or very bright.
+      // This helps classify the two middle clear tubes as Blank.
+      if (saturation < 0.16 || lightness > 0.88) {
         return "Blank";
       }
 
-      // Pink/red tube colors.
-      if ((hue >= 330 && hue <= 360) || (hue >= 0 && hue < 18)) {
+      // Pink/red tubes: strong red, lower green, and red-family hue.
+      if (
+        ((hue >= 340 && hue <= 360) || (hue >= 0 && hue < 18)) &&
+        r > 120 &&
+        redMinusGreen > 35
+      ) {
         return "Pink";
       }
 
-      // Orange tube colors.
-      if (hue >= 18 && hue < 42) {
+      // Strong pink backup for camera lighting shifts.
+      if (r > 145 && g < 105 && b < 130 && redMinusGreen > 45) {
+        return "Pink";
+      }
+
+      // Orange: red is clearly higher than green, but it is not pink/red.
+      // This is tuned for the sixth tube in your example image.
+      if (
+        hue >= 15 && hue < 42 &&
+        redMinusGreen >= 55 &&
+        g < 150
+      ) {
         return "Orange";
       }
 
-      // Yellow tube colors.
-      if (hue >= 42 && hue < 75) {
+      // Yellow: hue is yellow/orange-yellow AND green is still fairly strong.
+      // This keeps the first and third tubes yellow instead of orange.
+      if (
+        hue >= 35 && hue < 75 &&
+        g >= 120 &&
+        redMinusGreen < 75 &&
+        greenMinusBlue > 35
+      ) {
         return "Yellow";
       }
 
-      // Backup logic for camera lighting: compare to your four desired categories.
+      // Extra yellow backup for golden/yellow tube liquid.
+      if (r > 150 && g > 110 && b < 90 && redMinusGreen < 90) {
+        return "Yellow";
+      }
+
+      // Extra orange backup for deeper orange tube liquid.
+      if (r > 150 && g >= 65 && g < 130 && b < 90 && redMinusGreen >= 75) {
+        return "Orange";
+      }
+
+      // Backup logic: compare to calibrated examples from your tube images.
       return getClosestTubeCategory(r, g, b);
     }
 
